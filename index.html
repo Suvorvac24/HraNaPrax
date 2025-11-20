@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Talking Bob</title>
+
+<style>
+    .stats-container {
+        width: 300px;
+        margin: 20px auto;
+        font-family: sans-serif;
+    }
+
+    .stat {
+        margin-bottom: 15px;
+    }
+
+    .stat span {
+        font-size: 14px;
+        color: #333;
+    }
+
+    .bar {
+        width: 100%;
+        height: 14px;
+        background: #eeb702;
+        border-radius: 7px;
+        overflow: hidden;
+        margin-top: 3px;
+    }
+
+    .fill {
+        height: 100%;
+        width: 70%; /* initial value */
+        border-radius: 7px;
+        transition: width 0.3s ease; /* smooth animation */
+    }
+
+    .health { background: #4caf50; }
+    .hunger { background: #ff9800; }
+    .joy    { background: #2196f3; }
+
+    .square {
+        height: 500px;
+        width: 500px;
+        background-color: #f3f2f280;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-weight: bold;
+        margin: 0 auto;
+    }
+
+    button {
+        margin: 5px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<div class="stats-container">
+    <div class="stat">
+        <span>Health</span>
+        <div class="bar"><div class="fill health" id="healthFill" style="width:70%;"></div></div>
+    </div>
+
+    <div class="stat">
+        <span>Hunger</span>
+        <div class="bar"><div class="fill hunger" id="hungerFill" style="width:50%;"></div></div>
+    </div>
+
+    <div class="stat">
+        <span>Enjoyment</span>
+        <div class="bar"><div class="fill joy" id="joyFill" style="width:60%;"></div></div>
+    </div>
+</div>
+
+<h1 style="text-align:center;">Talking Bob</h1>
+
+<div class="square">
+    <img src="fish.jpg" alt="fish" width="250" height="250">
+</div>
+
+<div style="text-align:center; margin-top:20px;">
+    <button id="feedBtn">Feed</button>
+    <button id="sleepBtn">Sleep</button>
+    <button id="playBtn">Activities</button>
+</div>
+
+<script>
+    // Initial stat values (0% to 100%)
+    let health = 70;
+    let hunger = 50;
+    let joy = 60;
+
+    const healthFill = document.getElementById("healthFill");
+    const hungerFill = document.getElementById("hungerFill");
+    const joyFill = document.getElementById("joyFill");
+
+    // Update function for CSS width
+    function updateStats() {
+        healthFill.style.width = health + "%";
+        hungerFill.style.width = hunger + "%";
+        joyFill.style.width = joy + "%";
+    }
+
+    // Button actions
+    document.getElementById("feedBtn").addEventListener("click", () => {
+        hunger += 15; // feed reduces hunger
+        if(hunger > 100) hunger = 100;
+        joy += 5; // feeding makes pet happy
+        if(joy > 100) joy = 100;
+        updateStats();
+    });
+
+    document.getElementById("sleepBtn").addEventListener("click", () => {
+        health += 10; 
+        if(health > 100) health = 100;
+        hunger -= 10; 
+        if(hunger < 0) hunger = 0;
+        updateStats();
+    });
+
+    document.getElementById("playBtn").addEventListener("click", () => {
+        joy += 15; 
+        if(joy > 100) joy = 100;
+        health -= 5; 
+        if(health < 0) health = 0;
+        hunger -= 5; 
+        if(hunger < 0) hunger = 0;
+        updateStats();
+    });
+
+</script>
+
+</body>
+</html>
