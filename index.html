@@ -40,6 +40,8 @@
     .health { background: #4caf50; }
     .hunger { background: #ff9800; }
     .joy    { background: #2196f3; }
+    .strength { background: #c91f1f; }
+    .energy { background: #2907e7; }
 
     .square {
         height: 500px;
@@ -68,6 +70,16 @@
         <span>Health</span>
         <div class="bar"><div class="fill health" id="healthFill" style="width:70%;"></div></div>
     </div>
+    
+    <div class="stat">
+        <span>Energy</span>
+        <div class="bar"><div class="fill energy" id="energyFill" style="width:70%;"></div></div>
+    </div>
+
+    <div class="stat">
+        <span>Strength</span>
+        <div class="bar"><div class="fill strength" id="strengthFill" style="width:70%;"></div></div>
+    </div>
 
     <div class="stat">
         <span>Hunger</span>
@@ -83,13 +95,14 @@
 <h1 style="text-align:center;">Talking Bob</h1>
 
 <div class="square">
-    <img src="fish.jpg" alt="fish" width="250" height="250">
+    <img src="happy.png" id="petSprite" alt="fish" width="250" height="250">
 </div>
 
 <div style="text-align:center; margin-top:20px;">
     <button id="feedBtn">Feed</button>
     <button id="sleepBtn">Sleep</button>
     <button id="playBtn">Activities</button>
+    <button id="trainBtn">Train</button>
 </div>
 
 <script>
@@ -97,45 +110,88 @@
     let health = 70;
     let hunger = 50;
     let joy = 60;
+    let energy = 70;
+    let strength = 70;
 
     const healthFill = document.getElementById("healthFill");
     const hungerFill = document.getElementById("hungerFill");
     const joyFill = document.getElementById("joyFill");
+    const energyFill = document.getElementById("energyFill");
+    const strengthFill = document.getElementById("strengthFill");
+    const petSprite = document.getElementById("petSprite");
 
-    // Update function for CSS width
+    // Update stat bars
     function updateStats() {
         healthFill.style.width = health + "%";
         hungerFill.style.width = hunger + "%";
         joyFill.style.width = joy + "%";
+        energyFill.style.width = energy + "%";
+        strengthFill.style.width = strength + "%";
+    }
+
+    // Update pet sprite based on stats
+    function changeSprite() {
+        // Priority: low energy > low joy > high strength > default happy
+        if (energy < 30) {
+            petSprite.src = "tired.png";
+        } else if (joy < 30) {
+            petSprite.src = "sad.png";
+        } else if (strength > 80) {
+            petSprite.src = "strong.png";
+        } else {
+            petSprite.src = "happy.png";
+        }
     }
 
     // Button actions
     document.getElementById("feedBtn").addEventListener("click", () => {
-        hunger += 15; // feed reduces hunger
-        if(hunger > 100) hunger = 100;
-        joy += 5; // feeding makes pet happy
-        if(joy > 100) joy = 100;
+        hunger += 15; if(hunger > 100) hunger = 100;
+        joy += 5; if(joy > 100) joy = 100;
         updateStats();
+        changeSprite();
     });
 
     document.getElementById("sleepBtn").addEventListener("click", () => {
-        health += 10; 
-        if(health > 100) health = 100;
-        hunger -= 10; 
-        if(hunger < 0) hunger = 0;
+        health += 10; if(health > 100) health = 100;
+        hunger -= 10; if(hunger < 0) hunger = 0;
+        joy -= 10; if(joy < 0) joy = 0;
+        energy += 20; if(energy > 100) energy = 100;
         updateStats();
+        changeSprite();
     });
 
     document.getElementById("playBtn").addEventListener("click", () => {
-        joy += 15; 
-        if(joy > 100) joy = 100;
-        health -= 5; 
-        if(health < 0) health = 0;
-        hunger -= 5; 
-        if(hunger < 0) hunger = 0;
+        joy += 15; if(joy > 100) joy = 100;
+        health -= 5; if(health < 0) health = 0;
+        hunger -= 5; if(hunger < 0) hunger = 0;
+        energy -= 5; if(energy < 0) energy = 0;
         updateStats();
+        changeSprite();
     });
 
+    document.getElementById("trainBtn").addEventListener("click", () => {
+        strength += 10; if(strength > 100) strength = 100;
+        health -= 5; if(health < 0) health = 0;
+        energy -= 5; if(energy < 0) energy = 0;
+        hunger -= 5; if(hunger < 0) hunger = 0;
+        joy -= 5; if(joy < 0) joy = 0;
+        updateStats();
+        changeSprite();
+    });
+
+    // Optional: decay stats over time (like a real Tamagotchi)
+    setInterval(() => {
+        hunger -= 1; if(hunger < 0) hunger = 0;
+        joy -= 1; if(joy < 0) joy = 0;
+        energy -= 1; if(energy < 0) energy = 0;
+        health -= 0.5; if(health < 0) health = 0;
+        updateStats();
+        changeSprite();
+    }, 5000); // every 5 seconds
+
+    // Initial update
+    updateStats();
+    changeSprite();
 </script>
 
 </body>
