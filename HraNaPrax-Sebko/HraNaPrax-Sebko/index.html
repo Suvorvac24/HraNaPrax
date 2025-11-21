@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Talking Bob</title>
+
+<style>
+    body { margin: 0; font-family: sans-serif; background: #ffffff; }
+
+    .stats-container {
+        width: 300px;
+        margin: 20px auto;
+        background-image: url("background.png");
+    }
+
+    .kitchen {
+        width: 300px;
+        margin: 20px auto;
+        background-image: url("Kitchen.png");
+    }
+
+    .stat { margin-bottom: 15px; }
+    .stat span { font-size: 14px; color: #333; display:block; margin-bottom:4px;}
+    .bar { width: 100%; height: 14px; background: #eeb702; border-radius: 7px; overflow: hidden; }
+    .fill { height: 100%; width: 70%; border-radius: 7px; transition: width 0.3s ease; }
+    .health { background: #4caf50; }
+    .hunger { background: #ff9800; }
+    .joy { background: #2196f3; }
+    .strength { background: #c91f1f; }
+    .energy { background: #2907e7; }
+
+    h1 { text-align:center; margin-top:0; padding-top:10px; }
+
+    .square {
+        height: 500px;
+        width: 500px;
+        background-color: #f3f2f280;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-weight: bold;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    button {
+        margin: 5px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    /* Minigame fullscreen overlay */
+    #minigameOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: none; /* hidden by default */
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    #minigameBox {
+        width: min(900px, 95vw);
+        height: min(700px, 90vh);
+        background: linear-gradient(180deg,#fffefc,#f6f8ff);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* game area (where treats fall) */
+    #gameArea {
+        flex: 1;
+        position: relative;
+        background-image: linear-gradient(#e9f7ff 0%, #ffffff 100%);
+    }
+
+    .player {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 160px;
+        height: 160px;
+        pointer-events: none;
+    }
+
+    .treat {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        background: radial-gradient(circle at 30% 30%, #ffd, #ff8);
+        border-radius: 50%;
+        display: flex;
+        justify-content:center;
+        align-items:center;
+        font-weight:bold;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    #minigameHUD {
+        padding: 10px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #hudLeft { display:flex; gap:12px; align-items:center; }
+    #hudRight { display:flex; gap:8px; align-items:center; }
+
+    #finishBtn { background: #4caf50; color: white; border: none; padding: 8px 12px; border-radius:6px; cursor:pointer;}
+    #closeHint { background: #eee; border: none; padding:6px 8px; border-radius:6px; cursor:pointer; }
+
+    .centerMsg {
+        position:absolute;
+        left:50%;
+        top:12%;
+        transform:translateX(-50%);
+        background: rgba(255,255,255,0.9);
+        padding:8px 12px;
+        border-radius:8px;
+        font-weight:600;
+    }
+
+    /* Score bubble */
+    .scoreBubble {
+        background: rgba(255,255,255,0.9);
+        padding:6px 10px;
+        border-radius: 8px;
+        font-weight:700;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+
+    /* small mobile adjustments */
+    @media (max-width: 540px){
+        .player { width: 120px; height: 120px; }
+        .treat { width: 34px; height: 34px; }
+    }
+</style>
+</head>
+<body>
+
+<div class="stats-container">
+    <div class="stat">
+        <span>Health</span>
+        <div class="bar"><div class="fill health" id="healthFill" style="width:70%;"></div></div>
+    </div>
+
+    <div class="stat">
+        <span>Energy</span>
+        <div class="bar"><div class="fill energy" id="energyFill" style="width:70%;"></div></div>
+    </div>
+
+    <div class="stat">
+        <span>Strength</span>
+        <div class="bar"><div class="fill strength" id="strengthFill" style="width:70%;"></div></div>
+    </div>
+
+    <div class="stat">
+        <span>Hunger</span>
+        <div class="bar"><div class="fill hunger" id="hungerFill" style="width:50%;"></div></div>
+    </div>
+
+    <div class="stat">
+        <span>Enjoyment</span>
+        <div class="bar"><div class="fill joy" id="joyFill" style="width:60%;"></div></div>
+    </div>
+</div>
+
+<h1>Talking Bob</h1>
+
+<div class="square">
+    <img src="happy.png" id="petSprite" alt="pet" width="250" height="250">
+</div>
+
+<style>
+    .arrowRow {
+    display: flex;
+    justify-content: center;  /* or space-between / space-around */
+    align-items: center;
+    gap: 20%; /* distance between arrows */
+}
+
+.rotated2 {
+    transform: rotate(270deg);
+}
+
+.rotated3 {
+    transform: rotate(90deg);
+}
+
+</style>
+
+
+<div class="arrowRow">
+    <input type="image" id="arrowLeft" src="arrow.png" width="100" class="rotated3">
+    <input type="image" id="arrowRight" src="arrow.png" width="100" class="rotated2">
+</div>
+
+
+<div style="text-align:center; margin-top:20px;">
+    <button id="feedBtn">Feed</button>
+    <button id="sleepBtn">Sleep</button>
+    <button id="playBtn">Activities</button>
+    <button id="trainBtn">Train</button>
+</div>
+
+<!-- Minigame overlay (fullscreen) -->
+<div id="minigameOverlay">
+    <div id="minigameBox" role="dialog" aria-modal="true" aria-label="Catch the Treat minigame">
+        <div id="minigameHUD">
+            <div id="hudLeft">
+                <div class="scoreBubble">Score: <span id="mgScore">0</span></div>
+                <div class="scoreBubble">Time: <span id="mgTime">30</span>s</div>
+            </div>
+            <div id="hudRight">
+                <div style="font-size:14px; color:#333;">Controls: <strong>A / D</strong></div>
+                <button id="finishBtn">Finish</button>
+            </div>
+        </div>
+
+        <div id="gameArea">
+            <div class="centerMsg" id="mgHint">Catch treats — use A / D to move. Medium difficulty.</div>
+              
+            <!-- treats injected here -->
+        </div>
+    </div>
+</div>
+
+<style>
+.rotated {
+    transform: rotate(90deg);
+}
+</style>
+
+
+<script>
+    // Initial stat values (0% to 100%)
+    let health = 70;
+    let hunger = 50;
+    let joy = 60;
+    let energy = 70;
+    let strength = 70;
+    let isInBedroom = false
+    let isInKitchen = false
+
+
+
+    const healthFill = document.getElementById("healthFill");
+    const hungerFill = document.getElementById("hungerFill");
+    const joyFill = document.getElementById("joyFill");
+    const energyFill = document.getElementById("energyFill");
+    const strengthFill = document.getElementById("strengthFill");
+    const petSprite = document.getElementById("petSprite");
+
+    // Update stat bars
+    function updateStats() {
+        healthFill.style.width = health + "%";
+        hungerFill.style.width = hunger + "%";
+        joyFill.style.width = joy + "%";
+        energyFill.style.width = energy + "%";
+        strengthFill.style.width = strength + "%";
+    }
+
+    // Update pet sprite based on stats
+    function changeSprite() {
+        // Priority: low energy > low joy > high strength > default happy
+        if (energy < 30) {
+            petSprite.src = "tired.png";
+        } else if (joy < 30) {
+            petSprite.src = "sad.png";
+        } else if (strength > 80) {
+            petSprite.src = "happy.png"; // placeholder for 'strong.png', using happy.png
+        } else {
+            petSprite.src = "happy.png";
+        }
+    }
+
+    // Button actions (existing)
+    document.getElementById("feedBtn").addEventListener("click", () => {
+        hunger += 15; if(hunger > 100) hunger = 100;
+        joy += 5; if(joy > 100) joy = 100;
+        updateStats();
+        changeSprite();
+    });
+
+    document.getElementById("arrowLeft").addEventListener("click", () => {
+        console.log("Left Arrow Clicked")
+    });
+
+    let room = 0;
+    const rooms = [
+        "url('kitchen.png')",
+        "url('bedroom.png')"
+    ];
+
+    function showButton() {
+        const square = document.querySelector(".square");
+        const feedBtn = document.getElementById("feedBtn");
+        const sleepBtn = document.getElementById("sleepBtn")
+
+        // Hide button by default
+        feedBtn.style.display = "none";
+        sleepBtn.style.display = "none"
+
+        // If background contains 'kitchen.png', show feed button
+        if (square.style.backgroundImage.includes("kitchen.png")) {
+            feedBtn.style.display = "inline-block";
+        }
+        if(square.style.backgroundImage.includes ("bedroom.png")) {
+            sleepBtn.style.display = "inline-block"
+        }
+    }
+
+
+    document.getElementById("arrowRight").addEventListener("click", () => {
+        const square = document.querySelector(".square");
+
+        room = (room + 1) % rooms.length;   // loops 0 → 1 → 0 → 1 → ...
+        
+        square.style.backgroundImage = rooms[room];
+        square.style.backgroundSize = "100% 100%";
+        square.style.backgroundRepeat = "no-repeat";
+
+        showButton()
+    });
+
+    document.getElementById("arrowLeft").addEventListener("click", () => {
+    const square = document.querySelector(".square");
+
+    room = (room - 1 + rooms.length) % rooms.length; 
+    square.style.backgroundImage = rooms[room];
+    square.style.backgroundSize = "100% 100%";
+    square.style.backgroundRepeat = "no-repeat";
+});
+
+
+
+    document.getElementById("sleepBtn").addEventListener("click", () => {
+        health += 10; if(health > 100) health = 100;
+        hunger -= 10; if(hunger < 0) hunger = 0;
+        joy -= 10; if(joy < 0) joy = 0;
+        energy += 20; if(energy > 100) energy = 100;
+        updateStats();
+        changeSprite();
+    });
+
+    document.getElementById("playBtn").addEventListener("click", () => {
+        // We'll start the minigame here
+        startMinigame();
+    });
+
+    document.getElementById("trainBtn").addEventListener("click", () => {
+        strength += 10; if(strength > 100) strength = 100;
+        health -= 5; if(health < 0) health = 0;
+        energy -= 5; if(energy < 0) energy = 0;
+        hunger -= 5; if(hunger < 0) hunger = 0;
+        joy -= 5; if(joy < 0) joy = 0;
+        updateStats();
+        changeSprite();
+    });
+
+    // Optional: decay stats over time (like a real Tamagotchi)
+    let decayIntervalId = null;
+    function startDecay() {
+        if (decayIntervalId) clearInterval(decayIntervalId);
+        decayIntervalId = setInterval(() => {
+            hunger -= 1; if(hunger < 0) hunger = 0;
+            joy -= 1; if(joy < 0) joy = 0;
+            energy -= 1; if(energy < 0) energy = 0;
+            health -= 0.5; if(health < 0) health = 0;
+            updateStats();
+            changeSprite();
+        }, 5000); // every 5 seconds
+    }
+    startDecay();
+
+    // Initial update
+    updateStats();
+    changeSprite();
+
+
+    const overlay = document.getElementById("minigameOverlay");
+    const gameArea = document.getElementById("gameArea");
+    const mgPlayerSprite = document.getElementById("mgPlayerSprite");
+    const mgScoreEl = document.getElementById("mgScore");
+    const mgTimeEl = document.getElementById("mgTime");
+    const finishBtn = document.getElementById("finishBtn");
+    const mgHint = document.getElementById("mgHint");
+
+    // Game state
+    let mgRunning = false;
+    let mgScore = 0;
+    let mgTime = 30; // seconds
+    let spawnTimer = null;
+    let gameLoopId = null;
+    let treats = []; // array of treat objects {el, x, y, speed}
+    let playerXPercent = 50; // horizontal position (percent of gameArea width)
+    let keys = { left: false, right: false };
+    let savedDecayIntervalId = null;
+
+    // Difficulty: Medium => spawn ~ every 700ms, speed moderate
+    const spawnIntervalMs = 700;
+    const treatBaseSpeed = 300; // px per second baseline (will get scaled)
+    const maxTreatsOnScreen = 8;
+
+    function startMinigame() {
+        if (mgRunning) return;
+        // Pause stat decay
+        if (decayIntervalId) {
+            savedDecayIntervalId = decayIntervalId;
+            clearInterval(decayIntervalId);
+            decayIntervalId = null;
+        }
+
+        overlay.style.display = "flex";
+        mgRunning = true;
+        mgScore = 0;
+        mgTime = 30
+        mgScoreEl.textContent = mgScore;
+        mgTimeEl.textContent = mgTime;
+        mgHint.style.display = "block";
+
+        // Reset game area
+        clearTreats();
+
+        // Position player at center
+        playerXPercent = 50;
+        updatePlayerPosition();
+
+        // Start spawn timer
+        spawnTimer = setInterval(spawnTreat, spawnIntervalMs);
+
+        // Countdown timer
+        const countdown = setInterval(() => {
+            if (!mgRunning) { clearInterval(countdown); return; }
+            mgTime--;
+            mgTimeEl.textContent = mgTime;
+            if (mgTime <= 0) {
+                clearInterval(countdown);
+                endMinigame();
+            }
+        }, 1000);
+
+        // Start main animation loop
+        let lastTime = performance.now();
+        function loop(now) {
+            const dt = (now - lastTime) / 1000; // seconds
+            lastTime = now;
+            updatePlayer(dt);
+            updateTreats(dt);
+            // always check collisions
+            checkCollisions();
+            if (mgRunning) gameLoopId = requestAnimationFrame(loop);
+        }
+        gameLoopId = requestAnimationFrame(loop);
+
+        // show hint briefly
+        setTimeout(() => { if(mgHint) mgHint.style.display = "none"; }, 2500);
+    }
+
+    function endMinigame() {
+        if (!mgRunning) return;
+        mgRunning = false;
+        overlay.style.display = "none";
+
+        // clear timers/loops
+        if (spawnTimer) { clearInterval(spawnTimer); spawnTimer = null; }
+        if (gameLoopId) { cancelAnimationFrame(gameLoopId); gameLoopId = null; }
+        clearTreats();
+
+        // Resume stat decay
+        if (!decayIntervalId && savedDecayIntervalId === null) {
+            startDecay();
+        } else if (!decayIntervalId && savedDecayIntervalId !== null) {
+            // Restart decay with fresh interval
+            startDecay();
+            savedDecayIntervalId = null;
+        }
+
+        // Update main stats based on score
+        // +joy per treat caught, -hunger per treat, -energy per treat
+        const joyGain = mgScore * 2;       // each treat +2 joy
+        const hungerLoss = mgScore * 1;    // each treat -1 hunger (makes sense you eat)
+        const energyLoss = mgScore * 1;    // playing uses energy
+
+        joy += joyGain; if (joy > 100) joy = 100;
+        hunger -= hungerLoss; if (hunger < 0) hunger = 0;
+        energy -= energyLoss; if (energy < 0) energy = 0;
+
+        // small reward to health if score is high
+        if (mgScore >= 10) { health += 5; if (health > 100) health = 100; }
+
+        updateStats();
+        changeSprite();
+    }
+
+    finishBtn.addEventListener("click", () => {
+        endMinigame();
+    });
+
+    // spawn a treat at a random x position near the top
+    function spawnTreat() {
+        if (!mgRunning) return;
+        if (treats.length >= maxTreatsOnScreen) return;
+
+        const t = document.createElement("div");
+        t.classList.add("treat");
+        t.textContent = "🦴"; // treat emoji
+        gameArea.appendChild(t);
+
+        const areaRect = gameArea.getBoundingClientRect();
+        const x = Math.random() * (areaRect.width - 40);
+        const y = -50;
+        // medium difficulty: speed vary between treatBaseSpeed and treatBaseSpeed*1.6
+        const speed = treatBaseSpeed * (1 + (Math.random() * 0.6)); // px/sec
+
+        const treat = { el: t, x, y, speed };
+        treats.push(treat);
+
+        // place it
+        t.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    function updateTreats(dt) {
+        if (!mgRunning) return;
+        const areaRect = gameArea.getBoundingClientRect();
+        for (let i = treats.length - 1; i >= 0; i--) {
+            const tr = treats[i];
+            tr.y += tr.speed * dt;
+            // apply simple horizontal sway for visual variety
+            const sway = Math.sin((tr.y + tr.x) * 0.01) * 18;
+            tr.el.style.transform = `translate(${tr.x + sway}px, ${tr.y}px)`;
+            // remove if below area
+            if (tr.y > areaRect.height + 60) {
+                // missed treat => remove
+                tr.el.remove();
+                treats.splice(i, 1);
+            }
+        }
+    }
+
+    function clearTreats() {
+        treats.forEach(t => t.el.remove());
+        treats = [];
+    }
+
+    // Player movement & rendering
+    function updatePlayer(dt) {
+        if (!mgRunning) return;
+        // playerXPercent in percent of gameArea width
+        const speedPercentPerSec = 70; // percent per second (how fast A/D moves)
+        if (keys.left) playerXPercent -= speedPercentPerSec * dt;
+        if (keys.right) playerXPercent += speedPercentPerSec * dt;
+        if (playerXPercent < 5) playerXPercent = 5;
+        if (playerXPercent > 95) playerXPercent = 95;
+        updatePlayerPosition();
+    }
+
+    function updatePlayerPosition() {
+        const areaRect = gameArea.getBoundingClientRect();
+        // set left in px
+        const px = (playerXPercent / 100) * areaRect.width;
+        // center the sprite horizontally on px
+        const el = mgPlayerSprite;
+        const elW = el.getBoundingClientRect().width || 160;
+        const leftPx = Math.max(6, Math.min(areaRect.width - elW - 6, px - elW / 2));
+        el.style.left = leftPx + "px";
+    }
+
+    // collision detection: compare treat bounding boxes with player bounding box
+    function checkCollisions() {
+        if (!mgRunning) return;
+        const playerRect = mgPlayerSprite.getBoundingClientRect();
+        for (let i = treats.length - 1; i >= 0; i--) {
+            const tr = treats[i];
+            const trRect = tr.el.getBoundingClientRect();
+            // basic AABB collision
+            if (!(trRect.right < playerRect.left || trRect.left > playerRect.right || trRect.bottom < playerRect.top || trRect.top > playerRect.bottom)) {
+                // caught!
+                tr.el.remove();
+                treats.splice(i, 1);
+                handleCatch();
+            }
+        }
+    }
+
+    function handleCatch() {
+        mgScore++;
+        mgScoreEl.textContent = mgScore;
+        // brief bounce animation for player sprite
+        mgPlayerSprite.style.transform = "translateX(-50%) scale(1.06)";
+        setTimeout(() => { if(mgPlayerSprite) mgPlayerSprite.style.transform = "translateX(-50%) scale(1)"; }, 120);
+
+        // occasionally toggle the player sprite to show "happy" briefly
+        mgPlayerSprite.src = "happy.png";
+        setTimeout(() => {
+            if (mgPlayerSprite && mgRunning) {
+                // show tired if energy low, else happy
+                if (energy < 30) mgPlayerSprite.src = "tired.png";
+                else mgPlayerSprite.src = "happy.png";
+            }
+        }, 300);
+    }
+
+    /* Controls: A / D keys */
+    window.addEventListener("keydown", (e) => {
+        if (!mgRunning) return;
+        const key = e.key.toLowerCase();
+        if (key === "a") { keys.left = true; keys.right = false; e.preventDefault(); }
+        if (key === "d") { keys.right = true; keys.left = false; e.preventDefault(); }
+    });
+    window.addEventListener("keyup", (e) => {
+        if (!mgRunning) return;
+        const key = e.key.toLowerCase();
+        if (key === "a") keys.left = false;
+        if (key === "d") keys.right = false;
+    });
+
+    /* Pause if overlay is opened by other means or user switches tab */
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden && mgRunning) {
+            // optionally auto-finish to avoid leaving game running
+            endMinigame();
+        }
+    });
+
+    // Defensive: if user clicks outside finish or ESC, we do nothing (must press Finish)
+    window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && mgRunning) {
+            // treat Escape as finish as convenience
+            endMinigame();
+        }
+    });
+
+    // Ensure overlay resizes player correctly on window resize
+    window.addEventListener("resize", () => {
+        if (mgRunning) updatePlayerPosition();
+    });
+
+    showButton()
+
+</script>
+
+</body>
+</html>
