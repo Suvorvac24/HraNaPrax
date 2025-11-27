@@ -170,7 +170,7 @@
 <h1>Talking Bob</h1>
 
 <div class="square">
-    <img src="happy.png" id="petSprite" alt="pet" width="250" height="250">
+    <img src="PES.png" id="petSprite" alt="pet" width="250" height="250">
 </div>
 
 <div style="text-align:center; margin-top:20px;">
@@ -178,6 +178,16 @@
     <button id="sleepBtn">Sleep</button>
     <button id="playBtn">Activities</button>
     <button id="trainBtn">Train</button>
+    
+</div>
+
+<!-- Activities Menu -->
+<div id="activitiesMenu" 
+style="display:none; text-align:center; margin-top:20px;">
+<h2>Choose Activity</h2>
+<button id="playCatchBtn">Catch the Treat</button>
+<button id="playSkateBtn">Skateboard Run</button>
+<button onclick="closeActivitiesMenu()">Close</button>
 </div>
 
 <!-- Minigame overlay (fullscreen) -->
@@ -196,7 +206,7 @@
 
         <div id="gameArea">
             <div class="centerMsg" id="mgHint">Catch treats — use A / D to move. Medium difficulty.</div>
-            <img src="happy.png" id="mgPlayerSprite" class="player" alt="player">
+            <img src="PES.png" id="mgPlayerSprite" class="player" alt="player">
             <!-- treats injected here -->
         </div>
     </div>
@@ -228,15 +238,15 @@
 
     // Update pet sprite based on stats
     function changeSprite() {
-        // Priority: low energy > low joy > high strength > default happy
+        // Priority: low energy > low joy > high strength > default PES
         if (energy < 30) {
-            petSprite.src = "tired.png";
+            petSprite.src = "PES_UNAVENY.png";
         } else if (joy < 30) {
-            petSprite.src = "sad.png";
+            petSprite.src = "PES_SMUTNY.png";
         } else if (strength > 80) {
-            petSprite.src = "happy.png"; // placeholder for 'strong.png', using happy.png
+            petSprite.src = "PES_SILNY.png"; // placeholder for 'PES_SILNY.png', using PES.png
         } else {
-            petSprite.src = "happy.png";
+            petSprite.src = "PES.png";
         }
     }
 
@@ -258,9 +268,22 @@
     });
 
     document.getElementById("playBtn").addEventListener("click", () => {
-        // We'll start the minigame here
-        startMinigame();
-    });
+    document.getElementById("activitiesMenu").style.display = "block";
+});
+
+function closeActivitiesMenu(){
+    document.getElementById("activitiesMenu").style.display = "none";
+}
+
+document.getElementById("playCatchBtn").addEventListener("click", () => {
+    closeActivitiesMenu();
+    startMinigame(); 
+});
+document.getElementById("playSkateBtn").addEventListener("click", () => {
+    closeActivitiesMenu();
+    startSkateGame();
+});
+
 
     document.getElementById("trainBtn").addEventListener("click", () => {
         strength += 10; if(strength > 100) strength = 100;
@@ -507,13 +530,13 @@
         mgPlayerSprite.style.transform = "translateX(-50%) scale(1.06)";
         setTimeout(() => { if(mgPlayerSprite) mgPlayerSprite.style.transform = "translateX(-50%) scale(1)"; }, 120);
 
-        // occasionally toggle the player sprite to show "happy" briefly
-        mgPlayerSprite.src = "happy.png";
+        // occasionally toggle the player sprite to show "PES" briefly
+        mgPlayerSprite.src = "PES.png";
         setTimeout(() => {
             if (mgPlayerSprite && mgRunning) {
-                // show tired if energy low, else happy
-                if (energy < 30) mgPlayerSprite.src = "tired.png";
-                else mgPlayerSprite.src = "happy.png";
+                // show PES_UNAVENY if energy low, else PES
+                if (energy < 30) mgPlayerSprite.src = "PES_UNAVENY.png";
+                else mgPlayerSprite.src = "PES.png";
             }
         }, 300);
     }
@@ -552,6 +575,250 @@
     window.addEventListener("resize", () => {
         if (mgRunning) updatePlayerPosition();
     });
+
+/* ============================================
+      SIDE-SCROLLER MINIGAME – SKATE RUN
+   ============================================ */
+
+let skateSpeedMultiplier = 1; // for more difficulty as you get better
+let skateOverlay = null;
+let skateArea = null;
+let skatePlayer = null;
+
+let skateScore = 0;
+let skateTime = 30;
+let skateRunning = false;
+
+let skateGravity = 850;   // px/s^2
+let skateJumpForce = 420; // px/s
+let skateVelocityY = 0;
+let skateGroundY = 380;
+
+let obstacleInterval = null;
+let skateTimer = null;
+let nextObstacleTimeout = null
+
+function startSkateGame() {
+    skateRunning = true;
+    skateScore = 0;
+    skateTime = 90;
+    skateSpeedMultiplier = 1;
+
+
+    /* Overlay */
+    skateOverlay = document.createElement("div");
+    skateOverlay.style = `
+        position:fixed; inset:0; background:#0008;
+        display:flex; justify-content:center; align-items:center;
+        z-index:99999;
+    `;
+
+    /* Game box */
+    const box = document.createElement("div");
+    box.style = `
+        width:900px; height:500px; background:white;
+        border-radius:12px; overflow:hidden; position:relative;
+    `;
+    skateOverlay.appendChild(box);
+    document.body.appendChild(skateOverlay);
+
+    skateArea = box;
+
+    /* HUD */
+    const hud = document.createElement("div");
+    hud.style = `
+        width:100%; background:#eee; padding:8px;
+        display:flex; justify-content:space-between;
+        font-size:16px; font-weight:bold;
+    `;
+    hud.innerHTML = `
+        Score: <span id="skScore">0</span>
+        <span>Time: <span id="skTime">30</span>s</span>
+        <button id="skFinishBtn" style="padding:4px 10px;">Finish</button>
+    `;
+    box.appendChild(hud);
+
+    document.getElementById("skFinishBtn").onclick = endSkateGame;
+
+    /* Player */
+    skatePlayer = document.createElement("img");
+    skatePlayer.src = "PES_SKATEBOARD.png";
+    skatePlayer.style = `
+        position:absolute;
+        width:120px; height:120px;
+        left:80px; top:${skateGroundY}px;
+    `;
+    box.appendChild(skatePlayer);
+
+
+
+
+    scheduleNextObstacle(); // namiesto setInterval
+
+
+    function scheduleNextObstacle() {
+    if (!skateRunning) return;
+
+    // MINIMUM = 1100 ms (to je tvoja pôvodná medzera)
+    // MAXIMUM = 1900 ms (môžeš zmeniť podľa potreby)
+    const minGap = 1500;
+    const maxGap = 2500;
+
+    // čím väčší multiplikátor, tým kratšia medzera
+const speedFactor = Math.min(skateSpeedMultiplier, 2.5);  // max ×3 aby to nebolo nemožné
+
+const delay =
+    (minGap + Math.random() * (maxGap - minGap)) / speedFactor;
+
+    nextObstacleTimeout = setTimeout(() => {
+        spawnObstacle();
+        scheduleNextObstacle(); // plánuje ďalší spawn
+    }, delay);
+    }
+
+
+    /* Timer */
+    skateTimer = setInterval(() => {
+        skateTime--;
+        document.getElementById("skTime").textContent = skateTime;
+        // ⬆️ ZRÝCHLENIE KAŽDÚ SEKUNDU
+    skateSpeedMultiplier += 0.05;  
+        if (skateTime <= 0) endSkateGame();
+    }, 1000);
+
+    /* Game loop */
+    let last = performance.now();
+    function loop(now) {
+        if (!skateRunning) return;
+        let dt = (now - last) / 1000;
+        last = now;
+
+        updateSkatePlayer(dt);
+        updateObstacles(dt);
+        checkSkateCollision();
+
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    /* Controls: Space = jump */
+    window.addEventListener("keydown", skateJumpListener);
+}
+
+function skateJumpListener(e) {
+    if (!skateRunning) return;
+    if (e.code === "Space") {
+        // jump only if on ground
+        const y = parseInt(skatePlayer.style.top);
+        if (y >= skateGroundY) {
+            skateVelocityY = -skateJumpForce;
+        }
+    }
+}
+
+/* Player physics */
+function updateSkatePlayer(dt) {
+    skateVelocityY += skateGravity * dt;
+
+    let y = parseInt(skatePlayer.style.top);
+    y += skateVelocityY * dt;
+
+    // ground collision
+    if (y > skateGroundY) {
+        y = skateGroundY;
+        skateVelocityY = 0;
+    }
+
+    skatePlayer.style.top = y + "px";
+}
+
+/* Obstacles */
+let skateObstacles = [];
+
+function spawnObstacle() {
+    if (!skateRunning) return;
+
+    const obstacleImages = ["PREKAZKA1.png", "PREKAZKA2.png"];
+    
+
+    const obs = document.createElement("img");
+    const img = obstacleImages[Math.floor(Math.random() * obstacleImages.length)];
+    obs.src = img;
+
+    obs.style = `
+        position:absolute;
+        width:40px;
+        height:auto;
+        bottom:0;
+        left:900px;
+        image-rendering: pixelated;`
+    ;
+    
+    skateArea.appendChild(obs);
+
+    skateObstacles.push({ el: obs, x: 900 });
+}
+
+function updateObstacles(dt) {
+    for (let i = skateObstacles.length - 1; i >= 0; i--) {
+        const ob = skateObstacles[i];
+        ob.x -= 350 * skateSpeedMultiplier * dt;
+        ob.el.style.left = ob.x + "px";
+
+        // Count score when passed
+        if (ob.x < 60 && !ob.passed) {
+            ob.passed = true;
+            skateScore++;
+            document.getElementById("skScore").textContent = skateScore;
+        }
+
+        // Remove off-screen
+        if (ob.x < -60) {
+            ob.el.remove();
+            skateObstacles.splice(i, 1);
+        }
+    }
+}
+
+/* Collision detection */
+function checkSkateCollision() {
+    const p = skatePlayer.getBoundingClientRect();
+
+    for (const ob of skateObstacles) {
+        const r = ob.el.getBoundingClientRect();
+
+        if (!(p.right < r.left || p.left > r.right ||
+              p.bottom < r.top || p.top > r.bottom)) {
+            // hit obstacle → immediate end
+            endSkateGame();
+        }
+    }
+}
+
+/* END GAME */
+function endSkateGame() {
+    if (!skateRunning) return;
+    skateRunning = false;
+
+    clearTimeout(nextObstacleTimeout);
+    clearInterval(skateTimer);
+    window.removeEventListener("keydown", skateJumpListener);
+
+    if (skateOverlay) skateOverlay.remove();
+
+    // Convert score to stats
+    joy += skateScore * 4;
+    if (joy > 100) joy = 100;
+
+    energy -= Math.floor(skateScore / 3);
+    if (energy < 0) energy = 0;
+
+    hunger -= Math.floor(skateScore / 4);
+    if (hunger < 0) hunger = 0;
+
+    updateStats();
+    changeSprite();
+}
 
 </script>
 
