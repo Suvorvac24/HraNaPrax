@@ -6,11 +6,18 @@
 <title>Talking Bob</title>
 
 <style>
-    body { margin: 0; font-family: sans-serif; background: #fafafa; }
+      body { margin: 0; font-family: sans-serif; background: #fafafa; }
 
     .stats-container {
         width: 300px;
         margin: 20px auto;
+        background-image: url("background.png");
+    }
+
+    .kitchen {
+        width: 300px;
+        margin: 20px auto;
+        background-image: url("Kitchen.png");
     }
 
     .stat { margin-bottom: 15px; }
@@ -135,10 +142,24 @@
     @media (max-width: 540px){
         .player { width: 120px; height: 120px; }
         .treat { width: 34px; height: 34px; }
+        
     }
+    /* SOUND BUTTON */
+    #soundToggle {
+    position: fixed;
+    top: 20px;  
+    right: 20px;
+    padding: 10px 20px;
+    font-size: 18px;
+    border: 3px solid black;
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+}
 </style>
 </head>
 <body>
+    <audio id="bgMusic" src="game_music.wav" loop autoplay></audio>
 
 <div class="stats-container">
     <div class="stat">
@@ -166,6 +187,7 @@
         <div class="bar"><div class="fill joy" id="joyFill" style="width:60%;"></div></div>
     </div>
 </div>
+<button id="soundToggle">🔊 Sound On</button>
 
 <h1>Talking Bob</h1>
 
@@ -173,13 +195,37 @@
     <img src="PES.png" id="petSprite" alt="pet" width="250" height="250">
 </div>
 
+<style>
+    .arrowRow {
+    display: flex;
+    justify-content: center;  /* or space-between / space-around */
+    align-items: center;
+    gap: 20%; /* distance between arrows */
+}
+
+.rotated2 {
+    transform: rotate(270deg);
+}
+
+.rotated3 {
+    transform: rotate(90deg);
+}
+
+</style>
+
+
+<div class="arrowRow">
+    <input type="image" id="arrowLeft" src="arrow.png" width="100" class="rotated3">
+    <input type="image" id="arrowRight" src="arrow.png" width="100" class="rotated2">
+</div>
+
+
 <div style="text-align:center; margin-top:20px;">
     <button id="feedBtn">Feed</button>
     <button id="sleepBtn">Sleep</button>
     <button id="playBtn">Activities</button>
     <button id="trainBtn">Train</button>
-    
-</div>
+    </div>
 
 <!-- Activities Menu -->
 <div id="activitiesMenu" 
@@ -188,6 +234,7 @@ style="display:none; text-align:center; margin-top:20px;">
 <button id="playCatchBtn">Catch the Treat</button>
 <button id="playSkateBtn">Skateboard Run</button>
 <button onclick="closeActivitiesMenu()">Close</button>
+</div>
 </div>
 
 <!-- Minigame overlay (fullscreen) -->
@@ -206,11 +253,18 @@ style="display:none; text-align:center; margin-top:20px;">
 
         <div id="gameArea">
             <div class="centerMsg" id="mgHint">Catch treats — use A / D to move. Medium difficulty.</div>
-            <img src="PES.png" id="mgPlayerSprite" class="player" alt="player">
+              <img src="PES.png" id="mgPlayerSprite" class="player" alt="player">
             <!-- treats injected here -->
         </div>
     </div>
 </div>
+
+<style>
+.rotated {
+    transform: rotate(90deg);
+}
+</style>
+
 
 <script>
     // Initial stat values (0% to 100%)
@@ -219,6 +273,10 @@ style="display:none; text-align:center; margin-top:20px;">
     let joy = 60;
     let energy = 70;
     let strength = 70;
+    let isInBedroom = false
+    let isInKitchen = false
+
+
 
     const healthFill = document.getElementById("healthFill");
     const hungerFill = document.getElementById("hungerFill");
@@ -258,6 +316,79 @@ style="display:none; text-align:center; margin-top:20px;">
         changeSprite();
     });
 
+    document.getElementById("arrowLeft").addEventListener("click", () => {
+        console.log("Left Arrow Clicked")
+    });
+
+    let room = 0;
+    const rooms = [
+        "url('kitchen.png')",
+        "url('bedroom.png')"
+    ];
+
+    function showButton() {
+        const square = document.querySelector(".square");
+        const feedBtn = document.getElementById("feedBtn");
+        const sleepBtn = document.getElementById("sleepBtn")
+
+        // Hide button by default
+        feedBtn.style.display = "none";
+        sleepBtn.style.display = "none"
+
+        // If background contains 'kitchen.png', show feed button
+        if (square.style.backgroundImage.includes("kitchen.png")) {
+            feedBtn.style.display = "inline-block";
+        }
+        if(square.style.backgroundImage.includes ("bedroom.png")) {
+            sleepBtn.style.display = "inline-block"
+        }
+    }
+
+    // ===== MUSIC CONTROL =====
+const bgMusic = document.getElementById("bgMusic");
+const soundToggle = document.getElementById("soundToggle");
+
+// Niektoré prehliadače blokujú autoplay → skús ospravedlnené spuštění
+window.addEventListener("click", () => {
+    if (bgMusic.paused) bgMusic.play().catch(()=>{});
+}, { once: true });
+
+let soundOn = true;
+
+soundToggle.addEventListener("click", () => {
+    soundOn = !soundOn;
+    if (soundOn) {
+        bgMusic.play();
+        soundToggle.textContent = "🔊 Sound On";
+    } else {
+        bgMusic.pause();
+        soundToggle.textContent = "🔇 Sound Off";
+    }
+});
+
+    document.getElementById("arrowRight").addEventListener("click", () => {
+        const square = document.querySelector(".square");
+
+        room = (room + 1) % rooms.length;   // loops 0 → 1 → 0 → 1 → ...
+        
+        square.style.backgroundImage = rooms[room];
+        square.style.backgroundSize = "100% 100%";
+        square.style.backgroundRepeat = "no-repeat";
+
+        showButton()
+    });
+
+    document.getElementById("arrowLeft").addEventListener("click", () => {
+    const square = document.querySelector(".square");
+
+    room = (room - 1 + rooms.length) % rooms.length; 
+    square.style.backgroundImage = rooms[room];
+    square.style.backgroundSize = "100% 100%";
+    square.style.backgroundRepeat = "no-repeat";
+});
+
+
+
     document.getElementById("sleepBtn").addEventListener("click", () => {
         health += 10; if(health > 100) health = 100;
         hunger -= 10; if(hunger < 0) hunger = 0;
@@ -268,7 +399,8 @@ style="display:none; text-align:center; margin-top:20px;">
     });
 
     document.getElementById("playBtn").addEventListener("click", () => {
-    document.getElementById("activitiesMenu").style.display = "block";
+        // We'll start the minigame here
+        document.getElementById("activitiesMenu").style.display = "block";
 });
 
 function closeActivitiesMenu(){
@@ -283,8 +415,6 @@ document.getElementById("playSkateBtn").addEventListener("click", () => {
     closeActivitiesMenu();
     startSkateGame();
 });
-
-
     document.getElementById("trainBtn").addEventListener("click", () => {
         strength += 10; if(strength > 100) strength = 100;
         health -= 5; if(health < 0) health = 0;
@@ -314,7 +444,7 @@ document.getElementById("playSkateBtn").addEventListener("click", () => {
     updateStats();
     changeSprite();
 
-    /* ===========================
+/* ===========================
        Minigame: Catch the Treat
        Fullscreen overlay, A/D controls, Medium difficulty
        =========================== */
@@ -661,11 +791,11 @@ function startSkateGame() {
 
     // MINIMUM = 1100 ms (to je tvoja pôvodná medzera)
     // MAXIMUM = 1900 ms (môžeš zmeniť podľa potreby)
-    const minGap = 1500;
+    const minGap = 1900;
     const maxGap = 2500;
 
-    // čím väčší multiplikátor, tým kratšia medzera
-const speedFactor = Math.min(skateSpeedMultiplier, 2.5);  // max ×3 aby to nebolo nemožné
+    // bigger multiplier = faster spawns
+const speedFactor = Math.min(skateSpeedMultiplier, 2);  // max × aby to nebolo nemožné
 
 const delay =
     (minGap + Math.random() * (maxGap - minGap)) / speedFactor;
@@ -819,6 +949,11 @@ function endSkateGame() {
     updateStats();
     changeSprite();
 }
+
+</script>
+
+</body>
+</html>
 
 </script>
 
